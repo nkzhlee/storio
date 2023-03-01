@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Record Audio</title>
+</head>
+<body>
+	<form>
+		<button id="record-btn" type="button">Record Audio</button>
+	</form>
+
+	<script>
+		const recordButton = document.getElementById('record-btn');
+		let recorder;
+		let audioStream;
+		recordButton.addEventListener('click', () => {
+			if (!recorder) {
+				navigator.mediaDevices.getUserMedia({ audio: true })
+					.then((stream) => {
+						audioStream = stream;
+						recorder = new MediaRecorder(stream);
+						recorder.start();
+						recordButton.textContent = 'Stop Recording';
+					})
+					.catch((err) => {
+						console.error('Failed to get user media', err);
+					});
+			} else {
+				recorder.stop();
+				audioStream.getTracks().forEach((track) => {
+					track.stop();
+				});
+				recorder.ondataavailable = (event) => {
+					const formData = new FormData();
+					formData.append('audio', event.data);
+					fetch('/process-audio', { method: 'POST', body: formData })
+						.then((response) => {
+							console.log('Audio processed', response);
+						})
+						.catch((err) => {
+							console.error('Failed to process audio', err);
+						});
+				};
+				recordButton.textContent = 'Record Audio';
+				recorder = null;
+				audioStream = null;
+			}
+		});
+	</script>
+</body>
+</html>
